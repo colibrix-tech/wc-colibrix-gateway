@@ -25,3 +25,6 @@ pnpm-debug.log*
 
 # PHP / tests
 .phpunit.result.cache
+
+# Composer
+/vendor/

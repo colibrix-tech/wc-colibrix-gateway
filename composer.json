@@ -1,0 +1,21 @@
+{
+    "name": "colibrix/wc-colibrix-gateway",
+    "description": "WooCommerce payment gateways for Colibrix Gateway (Card + APM).",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "platform": {
+            "php": "7.4.33"
+        },
+        "sort-packages": true
+    }
+}

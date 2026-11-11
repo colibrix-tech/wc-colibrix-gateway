@@ -29,6 +29,18 @@ class WC_Colibrix_Gateway_Apm extends WC_Colibrix_Gateway_Abstract
         return __('Alternative payment methods via Colibrix Gateway.', 'wc-colibrix-gateway-payment');
     }
 
+    public function init_form_fields(): void
+    {
+        parent::init_form_fields();
+
+        $this->form_fields['bank_name'] = [
+            'title'       => __('Pre-selected bank', 'wc-colibrix-gateway-payment'),
+            'type'        => 'text',
+            'description' => __('Optional. Bank id that the payment page selects for the shopper, for example revolut_eu. Leave empty to show the bank list.', 'wc-colibrix-gateway-payment'),
+            'default'     => '',
+        ];
+    }
+
     protected function get_payment_endpoint(): string
     {
         return '/apm/payment';
@@ -70,6 +82,8 @@ class WC_Colibrix_Gateway_Apm extends WC_Colibrix_Gateway_Abstract
                 'address'    => trim((string) $order->get_billing_address_1() . ' ' . (string) $order->get_billing_address_2()),
                 'phone'      => (string) $order->get_billing_phone(),
             ],
+
+            'bank_name' => trim((string) $this->get_option('bank_name', '')),
         ];
 
         return $this->filter_empty($payload);

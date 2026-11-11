@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WooCommerce Colibrix Gateway Payment
  * Description: WooCommerce payment gateways for Colibrix Gateway (Card + APM).
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Colibrix Gateway
  * Requires at least: 5.8
  * Requires PHP: 7.4

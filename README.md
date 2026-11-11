@@ -52,6 +52,10 @@ Each payment method has the following settings:
 - `Test mode`
 - `Debug log`
 
+`Colibrix Gateway - APM` has one more setting:
+
+- `Pre-selected bank` - optional. The plugin sends the value as `bank_name`, and the Colibrix payment page opens with this bank selected. Enter the bank id, for example `revolut_eu`. Ask Colibrix for the bank ids of your shop, and make one test payment after you change the value. Leave the setting empty to show the bank list. If the id matches no bank, the payment page shows the bank list.
+
 Important: the code uses a development `API Base URL` by default. For production, replace it in the WooCommerce settings.
 
 ## Requirements
@@ -80,6 +84,7 @@ The plugin sends:
 - notification URL
 - customer return URL
 - customer data from WooCommerce billing fields
+- `bank_name` for APM payments, when `Pre-selected bank` has a value
 
 ## Project structure
 
@@ -90,6 +95,15 @@ The plugin sends:
 - `includes/gateways/class-wc-colibrix-gateway-apm.php` - APM gateway implementation
 - `includes/blocks/class-wc-colibrix-gateway-blocks-support.php` - WooCommerce Blocks integration
 - `assets/js/frontend/blocks.js` - payment method registration for checkout blocks
+
+## Tests
+
+The tests run without WordPress and WooCommerce. They use stub classes from `tests/stubs.php`.
+
+```bash
+composer install
+composer test
+```
 
 ## Logs and debugging
 
