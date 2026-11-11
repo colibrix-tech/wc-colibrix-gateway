@@ -1,0 +1,146 @@
+name: Validate, build and release plugin
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: >-
+          Existing tag (for example v1.1.0) to build from and attach the ZIP to
+          its GitHub release. Leave empty to only validate the selected branch.
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - "7.4"
+          - "8.1"
+          - "8.5"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run plugin tests
+        run: composer test
+
+      - name: Lint PHP sources
+        shell: bash
+        run: |
+          while IFS= read -r -d '' file; do
+            php -l "$file" >/dev/null
+          done < <(find . -path './vendor' -prune -o -type f -name '*.php' -print0)
+
+  package:
+    name: Installable ZIP
+    needs: quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "7.4"
+          coverage: none
+
+      - name: Build and verify installable archive
+        run: bash tests/test-package.sh
+
+      - name: Upload installable plugin
+        uses: actions/upload-artifact@v7
+        with:
+          name: wc-colibrix-gateway-payment
+          path: build/wc-colibrix-gateway-payment.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub release
+    needs: package
+    if: >-
+      (github.event_name == 'push' && github.ref_type == 'tag')
+      || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.release_tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - name: Download installable plugin
+        uses: actions/download-artifact@v7
+        with:
+          name: wc-colibrix-gateway-payment
+          path: dist
+
+      - name: Check that the tag matches the plugin version
+        shell: bash
+        run: |
+          zip="dist/wc-colibrix-gateway-payment.zip"
+          version="$(unzip -p "${zip}" wc-colibrix-gateway-payment/wc-colibrix-gateway-payment.php \
+            | sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*\([^[:space:]]*\).*$/\1/p' \
+            | head -n 1)"
+
+          if [[ -z "${version}" ]]; then
+            printf 'Plugin version not found in wc-colibrix-gateway-payment.php inside %s\n' "${zip}" >&2
+            exit 1
+          fi
+
+          if [[ "v${version}" != "${TAG}" ]]; then
+            printf 'Tag %s does not match plugin version %s\n' "${TAG}" "${version}" >&2
+            exit 1
+          fi
+
+          asset="dist/wc-colibrix-gateway-payment-${version}.zip"
+          mv "${zip}" "${asset}"
+          printf 'VERSION=%s\nASSET=%s\n' "${version}" "${asset}" >> "${GITHUB_ENV}"
+
+      - name: Create the release if it does not exist yet
+        shell: bash
+        run: |
+          if gh release view "${TAG}" --json tagName >/dev/null 2>&1; then
+            printf 'Release %s already exists, attaching the ZIP to it\n' "${TAG}"
+          else
+            gh release create "${TAG}" \
+              --verify-tag \
+              --title "Release ${VERSION}" \
+              --generate-notes
+          fi
+
+      - name: Attach the ZIP to the release
+        run: gh release upload "${TAG}" "${ASSET}" --clobber

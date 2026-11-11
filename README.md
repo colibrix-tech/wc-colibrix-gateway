@@ -72,6 +72,8 @@ Important: the code uses a development `API Base URL` by default. For production
 4. Configure `Colibrix Gateway - Card` and/or `Colibrix Gateway - APM`.
 5. Enter your live or test Colibrix API credentials.
 
+As an alternative to step 1, download `wc-colibrix-gateway-payment-<version>.zip` from the GitHub release and upload it on the WordPress `Plugins -> Add New -> Upload Plugin` page.
+
 ## Data sent to the API
 
 The plugin sends:
@@ -104,6 +106,31 @@ The tests run without WordPress and WooCommerce. They use stub classes from `tes
 composer install
 composer test
 ```
+
+## Releases
+
+The GitHub workflow `.github/workflows/build-release.yml` runs the tests on PHP 7.4, 8.1 and 8.5, builds the plugin ZIP and attaches it to the GitHub release of a tag.
+
+The plugin ZIP has one top-level folder, `wc-colibrix-gateway-payment/`, with `LICENSE`, `README.md`, `assets/`, `includes/` and `wc-colibrix-gateway-payment.php`. The script builds the ZIP from the last commit. `.gitattributes` keeps the development files out of it.
+
+Build and check the ZIP locally:
+
+```bash
+bin/build-package.sh
+bash tests/test-package.sh
+```
+
+The result is `build/wc-colibrix-gateway-payment.zip`.
+
+Make a release:
+
+1. Set `Version:` in the header of `wc-colibrix-gateway-payment.php`, for example `1.1.0`.
+2. Merge the change into `main`.
+3. Push the tag `v` plus the version, for example `v1.1.0`.
+
+The workflow stops with an error when the tag is not equal to `v` plus the `Version:` value. If the tag has no GitHub release, the workflow creates it. Then the workflow attaches `wc-colibrix-gateway-payment-<version>.zip`.
+
+To build the ZIP again for a tag that exists, start the workflow manually and enter the tag in `release_tag`.
 
 ## Logs and debugging
 
